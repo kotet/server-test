@@ -1,14 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="style.css" />
     <title>Document</title>
+    <script>
+        let conn;
+        let canvas;
+        let ctx;
+        let sclist;
+        let cclist;
+        let clist_head;
+        if (window["WebSocket"]) {
+            conn = new WebSocket("ws://" + document.location.host + "/websocket");
+            conn.onclose = function (event) {
+                console.log("connection closed");
+                console.log(event);
+            };
+            conn.onmessage = function (event) {
+                let reader = new FileReader();
+                reader.onloadend = function (event) {
+                    let data = new Uint8Array(event.target.result);
+                    let sin = data[0];
+                    let cos = data[1];
+                    document.getElementById("random-value").innerText = sin + ", " + cos;
+                    sclist[clist_head] = sin;
+                    cclist[clist_head] = cos;
+                    clist_head = (clist_head + 1) % canvas.width;
+                }
+                reader.readAsArrayBuffer(event.data);
+            };
+        } else {
+            alert("Your browser does not support WebSockets.");
+        }
+        window.onload = function () {
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext("2d");
+            sclist = new Uint8Array(canvas.width);
+            cclist = new Uint8Array(canvas.width);
+            clist_head = 0;
+            requestAnimationFrame(render);
+        }
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.strokeStyle = "blue";
+            ctx.moveTo(0, canvas.height - Number(sclist[clist_head]));
+            for (let i = 1; i < canvas.width; i++) {
+                ctx.lineTo(i, canvas.height - Number(sclist[(clist_head + i) % canvas.width]));
+            }
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = "red";
+            ctx.moveTo(0, canvas.height - Number(cclist[clist_head]));
+            for (let i = 1; i < canvas.width; i++) {
+                ctx.lineTo(i, canvas.height - Number(cclist[(clist_head + i) % canvas.width]));
+            }
+            ctx.stroke();
+
+            requestAnimationFrame(render);
+        }
+    </script>
 </head>
+
 <body>
     <h1>Hello!</h1>
     <a href="/api">/api</a>
+    <p>websocket: <output id="random-value"></output></p>
+    <canvas id="canvas" width="1000" height="256"></canvas>
 </body>
+
 </html>
